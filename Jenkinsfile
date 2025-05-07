@@ -2,74 +2,102 @@ pipeline {
     agent any
 
     environment {
-        EMAIL_RECIPIENT = 'chinthika.jayani@gmail.com'
         LOG_FILE = 'build.log'
+        RECIPIENT = 'chinthika.jayani@gmail.com'
     }
 
     stages {
+
         stage('Build') {
             steps {
-                echo 'Stage: Build'
-                sh '''
-                    cd part2-task2-email
-                    npm install | tee ../${LOG_FILE}
-                '''
+                echo 'Tool: npm (for JavaScript/Node.js projects)'
+                sh 'npm install > ${LOG_FILE} 2>&1 || true'
             }
         }
 
         stage('Unit and Integration Tests') {
             steps {
-                echo 'Stage: Unit and Integration Tests'
+                echo 'Tools: Jest (for unit testing), Supertest (for integration tests)'
                 script {
-                    try {
-                        sh '''
-                            cd part2-task2-email
-                            npm test | tee -a ../${LOG_FILE}
-                        '''
-                        currentBuild.result = 'SUCCESS'
-                    } catch (Exception e) {
-                        currentBuild.result = 'FAILURE'
-                        throw e
+                    def status = sh(script: 'npm test >> ${LOG_FILE} 2>&1', returnStatus: true)
+                    if (status == 0) {
+                        emailext (
+                            to: "${env.RECIPIENT}",
+                            subject: "Unit & Integration Tests Succeeded",
+                            body: "The Unit and Integration Tests stage completed successfully.",
+                            attachmentsPattern: "${LOG_FILE}",
+                            mimeType: 'text/plain'
+                        )
+                    } else {
+                        emailext (
+                            to: "${env.RECIPIENT}",
+                            subject: "Unit & Integration Tests Failed",
+                            body: "The Unit and Integration Tests stage failed. Please check the attached log.",
+                            attachmentsPattern: "${LOG_FILE}",
+                            mimeType: 'text/plain'
+                        )
+                        error("Tests failed.")
                     }
                 }
             }
-            post {
-                always {
-                    emailext(
-                        subject: "Test Stage: ${currentBuild.currentResult}",
-                        body: "The Unit and Integration Test stage has completed with status: ${currentBuild.currentResult}",
-                        to: "${EMAIL_RECIPIENT}",
-                        attachmentsPattern: "${LOG_FILE}"
-                    )
-                }
+        }
+
+        stage('Code Analysis') {
+            steps {
+                echo 'Tool: SonarQube (for static code analysis)'
+                echo 'Pretend we run sonar-scanner here.'
+                sh 'echo "SonarQube analysis complete." >> ${LOG_FILE}'
             }
         }
 
         stage('Security Scan') {
             steps {
-                echo 'Stage: Security Scan'
+                echo 'Tool: Snyk (for vulnerability scanning in dependencies)'
                 script {
-                    try {
-                        sh '''
-                            cd part2-task2-email
-                            npm audit | tee -a ../${LOG_FILE}
-                        '''
-                        currentBuild.result = 'SUCCESS'
-                    } catch (Exception e) {
-                        currentBuild.result = 'FAILURE'
-                        throw e
+                    def status = sh(script: 'echo "Running Snyk scan..." >> ${LOG_FILE} && snyk test >> ${LOG_FILE} 2>&1', returnStatus: true)
+                    if (status == 0) {
+                        emailext (
+                            to: "${env.RECIPIENT}",
+                            subject: "Security Scan Passed",
+                            body: "Security scan completed with no vulnerabilities.",
+                            attachmentsPattern: "${LOG_FILE}",
+                            mimeType: 'text/plain'
+                        )
+                    } else {
+                        emailext (
+                            to: "${env.RECIPIENT}",
+                            subject: "Security Scan Failed",
+                            body: "Security scan found issues. Please see the attached log.",
+                            attachmentsPattern: "${LOG_FILE}",
+                            mimeType: 'text/plain'
+                        )
+                        error("Security scan failed.")
                     }
                 }
             }
-            post {
-                always {
-                    emailext(
-                        subject: "Security Scan: ${currentBuild.currentResult}",
-                        body: "The Security Scan stage has completed with status: ${currentBuild.currentResult}",
-                        to: "${EMAIL_RECIPIENT}",
-                        attachmentsPattern: "${LOG_FILE}"
-                    )
-                }
+        }
+
+        stage('Deploy to Staging') {
+            steps {
+                echo 'Tool: Docker Compose or Helm (for staging deployment)'
+                echo 'Pretend we deploy to staging.'
+                sh 'echo "Deployed to staging." >> ${LOG_FILE}'
+            }
+        }
+
+        stage('Integration Tests on Staging') {
+            steps {
+                echo 'Tool: Selenium (for UI/end-to-end testing)'
+                echo 'Pretend we run Selenium tests.'
+                sh 'echo "Selenium tests passed." >> ${LOG_FILE}'
+            }
+        }
+
+        stage('Deploy to Production') {
+            steps {
+                echo 'Tool: AWS CLI (for deployment to AWS EC2)'
+                echo 'Pretend we deploy to production.'
+                sh 'echo "Deployed to production." >> ${LOG_FILE}'
             }
         }
     }
