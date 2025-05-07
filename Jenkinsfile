@@ -82,7 +82,7 @@ pipeline {
 
         stage('Deploy to Production') {
             steps {
-                echo 'Tool: AWS CLI'
+               
             }
         }
     }
