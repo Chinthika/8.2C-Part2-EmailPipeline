@@ -6,10 +6,6 @@ pipeline {
         LOG_FILE = 'build.log'
     }
 
-    options {
-        ansiColor('xterm')
-    }
-
     stages {
         stage('Build') {
             steps {
