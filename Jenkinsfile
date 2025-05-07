@@ -2,72 +2,78 @@ pipeline {
     agent any
 
     environment {
-        LOG_FILE = 'pipeline-stage.log'
+        EMAIL_RECIPIENT = 'your_email@example.com'  // <- Change this
+        LOG_FILE = 'build.log'
+    }
+
+    options {
+        ansiColor('xterm')
     }
 
     stages {
         stage('Build') {
             steps {
-                echo 'Tool: npm'
-                sh 'npm install'
+                echo 'Stage: Build'
+                sh '''
+                    cd part2-task2-email
+                    npm install | tee ../${LOG_FILE}
+                '''
             }
         }
 
         stage('Unit and Integration Tests') {
             steps {
-                echo 'Tools: JUnit (unit) and Testcontainers (integration)'
-                sh 'echo "Running tests..." > ${LOG_FILE}'
-                sh 'npm test || echo "Tests failed but continuing" >> ${LOG_FILE}'
+                echo 'Stage: Unit and Integration Tests'
+                script {
+                    try {
+                        sh '''
+                            cd part2-task2-email
+                            npm test | tee -a ../${LOG_FILE}
+                        '''
+                        currentBuild.result = 'SUCCESS'
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
+                        throw e
+                    }
+                }
             }
             post {
                 always {
-                    emailext subject: "Test Stage - Build ${currentBuild.currentResult}",
-                              body: "The Test stage has completed with status: ${currentBuild.currentResult}. Please find the attached logs.",
-                              to: "chinthika.jayani@gmail.com",
-                              attachmentsPattern: "${LOG_FILE}",
-                              compressLog: true
+                    emailext(
+                        subject: "Test Stage: ${currentBuild.currentResult}",
+                        body: "The Unit and Integration Test stage has completed with status: ${currentBuild.currentResult}",
+                        to: "${EMAIL_RECIPIENT}",
+                        attachmentsPattern: "${LOG_FILE}"
+                    )
                 }
-            }
-        }
-
-        stage('Code Analysis') {
-            steps {
-                echo 'Tool: SonarQube'
             }
         }
 
         stage('Security Scan') {
             steps {
-                echo 'Tool: Snyk'
-                sh 'echo "Running npm audit..." > ${LOG_FILE}'
-                sh 'npm audit || echo "Security scan found issues" >> ${LOG_FILE}'
+                echo 'Stage: Security Scan'
+                script {
+                    try {
+                        sh '''
+                            cd part2-task2-email
+                            npm audit | tee -a ../${LOG_FILE}
+                        '''
+                        currentBuild.result = 'SUCCESS'
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
+                        throw e
+                    }
+                }
             }
             post {
                 always {
-                    emailext subject: "Security Scan - Build ${currentBuild.currentResult}",
-                              body: "The Security Scan stage has completed with status: ${currentBuild.currentResult}. Please find the attached logs.",
-                              to: "chinthika.jayani@gmail.com",
-                              attachmentsPattern: "${LOG_FILE}",
-                              compressLog: true
+                    emailext(
+                        subject: "Security Scan: ${currentBuild.currentResult}",
+                        body: "The Security Scan stage has completed with status: ${currentBuild.currentResult}",
+                        to: "${EMAIL_RECIPIENT}",
+                        attachmentsPattern: "${LOG_FILE}"
+                    )
                 }
-            }
-        }
-
-        stage('Deploy to Staging') {
-            steps {
-                echo 'Tool: Helm (for Kubernetes deployment via AWS EKS)'
-            }
-        }
-
-        stage('Integration Tests on Staging') {
-            steps {
-                echo 'Tool: Selenium'
-            }
-        }
-
-        stage('Deploy to Production') {
-            steps {
-                echo 'Tool: AWS CLI'
             }
         }
     }
