@@ -60,7 +60,7 @@ pipeline {
                 always {
                     emailext(
                         subject: "Security Scan Stage - ${currentBuild.result}",
-                        body: """<p>The Security Scan stage completed with status: ${currentBuild.result}. <br>Please check the attached logs.</p>""",
+                        body: "The Security Scan stage completed with status: ${currentBuild.result}. Please check the attached logs.",
                         to: "s225045772@deakin.edu.au",
                         attachLog: true
                     )
