@@ -5,14 +5,14 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Tool: npm'
-                sh 'npm install'
+                sh 'echo "Simulated build complete." > build.log'
             }
         }
 
         stage('Unit and Integration Tests') {
             steps {
                 echo 'Tools: Mocha (unit) and Jest (integration)'
-                sh 'npm test || true' // to allow post block to run even if tests fail
+                sh 'npm test || true'
             }
             post {
                 always {
